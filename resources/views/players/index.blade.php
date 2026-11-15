@@ -30,13 +30,7 @@
             </tbody>
         </table>
     </div>
-    @if($players->hasPages())
-        <nav class="pagination" aria-label="Страницы">
-            @if($players->previousPageUrl())<a class="button secondary" href="{{ $players->previousPageUrl() }}">← Назад</a>@endif
-            <span>{{ $players->currentPage() }} из {{ $players->lastPage() }}</span>
-            @if($players->nextPageUrl())<a class="button secondary" href="{{ $players->nextPageUrl() }}">Дальше →</a>@endif
-        </nav>
-    @endif
+    @include('partials.pagination', ['pages' => $players])
 @else
     <div class="empty">
         <span class="metric-icon" aria-hidden="true">▤</span><h2>{{ $search !== '' ? 'Игроки не найдены' : 'Анкет пока нет' }}</h2>

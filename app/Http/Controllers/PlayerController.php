@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Answer;
+use App\Models\ChangeLog;
 use App\Models\Player;
 use App\Models\Question;
 use App\Models\Questionnaire;
@@ -56,9 +56,13 @@ class PlayerController extends Controller
         return $this->save($request, $player);
     }
 
-    public function destroy(Player $player): RedirectResponse
+    public function destroy(Request $request, Player $player): RedirectResponse
     {
-        $player->delete();
+        DB::transaction(function () use ($request, $player) {
+            $current = Player::query()->lockForUpdate()->findOrFail($player->id);
+            $current->delete();
+            ChangeLog::record($request->user(), $current, 'deleted');
+        }, attempts: 3);
 
         return to_route('players.index')->with('status', 'Анкета удалена.');
     }
@@ -114,33 +118,53 @@ class PlayerController extends Controller
             }
             $validated = validator(['answers' => $input, 'clarifications' => $clarifications], $rules, [], $labels)->validate();
 
-            $player->fill($request->only(['nickname', 'notes', 'interviewed_on']));
+            $player->fill(array_intersect_key($meta, array_flip($player->getFillable())));
+            $fields = array_values(array_intersect_key([
+                'nickname' => 'Ник',
+                'notes' => 'Примечание об игроке',
+                'interviewed_on' => 'Дата опроса',
+            ], $player->getDirty()));
+
+            $rows = [];
+            $previousAnswers = $existing ? $player->answers()->get()->keyBy('question_id') : collect();
+            foreach ($questions as $question) {
+                $previous = $previousAnswers->get($question->id);
+                $value = $validated['answers'][$question->id] ?? null;
+                $clarification = array_key_exists($question->id, $clarifications)
+                    ? $validated['clarifications'][$question->id] ?? null
+                    : $previous?->clarification;
+                $attributes = $value === null
+                    ? ['value' => null, 'numeric_value' => null]
+                    : $question->type->answerAttributes($value);
+
+                if ($previous?->value !== $attributes['value']) {
+                    $fields[] = "Ответ «{$question->label}»";
+                }
+                if ($previous?->clarification !== $clarification) {
+                    $fields[] = "Уточнение «{$question->label}»";
+                }
+                if ($value !== null || $clarification !== null) {
+                    $rows[$question->id] = [
+                        'question_id' => $question->id,
+                        'clarification' => $clarification,
+                        ...$attributes,
+                    ];
+                }
+            }
+
+            if ($existing && $fields === []) {
+                return;
+            }
             if ($existing) {
                 $player->revision++;
             }
             $player->save();
 
-            $rows = [];
-            $previousAnswers = $existing ? $player->answers()->get()->keyBy('question_id') : collect();
-            foreach ($questions as $question) {
-                $value = $validated['answers'][$question->id] ?? null;
-                $clarification = array_key_exists($question->id, $clarifications)
-                    ? $validated['clarifications'][$question->id] ?? null
-                    : $previousAnswers->get($question->id)?->clarification;
-                if ($value !== null || $clarification !== null) {
-                    $rows[] = [
-                        'player_id' => $player->id,
-                        'question_id' => $question->id,
-                        'clarification' => $clarification,
-                        ...($value === null ? ['value' => null, 'numeric_value' => null] : $question->type->answerAttributes($value)),
-                    ];
-                }
-            }
-
-            $player->answers()->whereNotIn('question_id', array_column($rows, 'question_id'))->delete();
+            $player->answers()->whereNotIn('question_id', array_keys($rows))->delete();
             if ($rows !== []) {
-                Answer::query()->upsert($rows, ['player_id', 'question_id'], ['value', 'numeric_value', 'clarification']);
+                $player->answers()->upsert(array_values($rows), ['player_id', 'question_id'], ['value', 'numeric_value', 'clarification']);
             }
+            ChangeLog::record($request->user(), $player, $existing ? 'updated' : 'created', $fields);
         }, attempts: 3);
 
         return to_route('players.index')->with('status', $existing ? 'Анкета обновлена.' : 'Анкета добавлена.');

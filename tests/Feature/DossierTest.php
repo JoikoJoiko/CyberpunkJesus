@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Answer;
+use App\Models\ChangeLog;
 use App\Models\Player;
 use App\Models\Question;
 use App\Models\Questionnaire;
@@ -16,7 +17,7 @@ class DossierTest extends TestCase
 
     public function test_all_archive_pages_require_login_and_a_colleague_can_sign_in(): void
     {
-        foreach (['dashboard', 'players.index', 'questions.index', 'reports.answers'] as $route) {
+        foreach (['dashboard', 'players.index', 'questions.index', 'reports.answers', 'history.index'] as $route) {
             $this->get(route($route))->assertRedirect(route('login'));
         }
         $this->get(route('login'))->assertOk()->assertSee('Вход в архив');
@@ -128,5 +129,47 @@ class DossierTest extends TestCase
             'answers' => [$question->id => 'Нет'],
         ])->assertSessionHasErrors('questionnaire_revision');
         $this->assertDatabaseCount('players', 1);
+    }
+
+    public function test_history_attributes_changes_to_accounts_without_copying_answer_contents(): void
+    {
+        $first = User::factory()->create(['name' => 'Первый автор']);
+        $second = User::factory()->create(['name' => 'Второй автор']);
+
+        $this->actingAs($first)->post(route('questions.store'), [
+            'label' => 'Рост',
+            'type' => 'number',
+            'position' => 10,
+        ])->assertRedirect(route('questions.index'));
+        $question = Question::sole();
+        $data = [
+            'nickname' => 'PixelGhost',
+            'questionnaire_revision' => Questionnaire::revision(),
+            'answers' => [$question->id => '190'],
+        ];
+        $this->post(route('players.store'), $data)->assertRedirect(route('players.index'));
+        $player = Player::sole();
+
+        $this->actingAs($second)->put(route('players.update', $player), [
+            ...$data,
+            'player_revision' => $player->revision,
+            'clarifications' => [$question->id => 'Сказал наугад'],
+        ])->assertRedirect(route('players.index'));
+        $this->assertSame(['Уточнение «Рост»'], ChangeLog::latest('id')->firstOrFail()->fields);
+
+        $this->put(route('players.update', $player), [
+            ...$data,
+            'player_revision' => $player->fresh()->revision,
+            'clarifications' => [$question->id => 'Сказал наугад'],
+        ])->assertRedirect(route('players.index'));
+        $this->assertDatabaseCount('change_logs', 3);
+
+        $this->delete(route('questions.destroy', $question))->assertRedirect(route('questions.index'));
+        $this->assertDatabaseCount('answers', 0);
+        $this->assertDatabaseHas('change_logs', ['actor_id' => $second->id, 'subject_type' => 'question', 'operation' => 'deleted']);
+
+        $this->get(route('history.index'))->assertOk()
+            ->assertSee($first->name)->assertSee($second->name)->assertSee($second->email)
+            ->assertSee('Уточнение «Рост»')->assertDontSee('Сказал наугад');
     }
 }

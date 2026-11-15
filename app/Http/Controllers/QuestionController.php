@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ChangeLog;
 use App\Models\Question;
 use App\Models\Questionnaire;
 use App\Models\QuestionType;
@@ -46,12 +47,14 @@ class QuestionController extends Controller
         return $this->save($request, $question);
     }
 
-    public function destroy(Question $question): RedirectResponse
+    public function destroy(Request $request, Question $question): RedirectResponse
     {
-        DB::transaction(function () use ($question) {
+        DB::transaction(function () use ($request, $question) {
             Questionnaire::revision(lock: true);
-            $question->delete();
+            $current = Question::findOrFail($question->id);
+            $current->delete();
             Questionnaire::advance();
+            ChangeLog::record($request->user(), $current, 'deleted');
         }, attempts: 3);
 
         return to_route('questions.index')->with('status', 'Вопрос, ответы и уточнения удалены.');
@@ -82,7 +85,7 @@ class QuestionController extends Controller
             ])->validate();
         }
 
-        DB::transaction(function () use ($existing, $data, $type, $options) {
+        DB::transaction(function () use ($request, $existing, $data, $type, $options) {
             Questionnaire::revision(lock: true);
             $question = $existing ? Question::findOrFail($existing->id) : new Question;
 
@@ -111,8 +114,20 @@ class QuestionController extends Controller
                 }
             }
 
-            $question->fill($data)->fill(['type' => $type, 'options' => $options])->save();
+            $question->fill($data)->fill(['type' => $type, 'options' => $options]);
+            $fields = array_values(array_intersect_key([
+                'label' => 'Текст вопроса',
+                'type' => 'Тип ответа',
+                'options' => 'Варианты ответа',
+                'position' => 'Порядок в анкете',
+            ], $question->getDirty()));
+            if ($existing && $fields === []) {
+                return;
+            }
+
+            $question->save();
             Questionnaire::advance();
+            ChangeLog::record($request->user(), $question, $existing ? 'updated' : 'created', $fields);
         }, attempts: 3);
 
         return to_route('questions.index')->with('status', $existing ? 'Вопрос обновлён.' : 'Вопрос добавлен.');

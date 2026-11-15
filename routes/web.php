@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\PlayerController;
 use App\Http\Controllers\QuestionController;
 use Illuminate\Support\Facades\Route;
@@ -16,5 +17,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/answers/{question?}', [DashboardController::class, 'answers'])->name('reports.answers');
     Route::resource('players', PlayerController::class)->except('show');
     Route::resource('questions', QuestionController::class)->except('show');
+    Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 });

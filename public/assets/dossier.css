@@ -120,6 +120,9 @@ tbody tr:hover { background: #201825; }
 .row-title { color: var(--text); font-weight: 700; }
 .row-title:hover { color: var(--pink); }
 .row-note { display: block; color: var(--muted); font-size: 12px; }
+.history-table { min-width: 540px; }
+.history-table td:last-child { white-space: normal; }
+.history-fields { margin: 6px 0 0; padding-left: 17px; }
 .pagination { display: flex; align-items: center; justify-content: center; gap: 13px; padding: 15px; border-top: 1px solid var(--border); font-size: 14px; }
 .tag { display: inline-block; padding: 3px 8px; background: #302039; color: #efd1ec; font-size: 12px; border-radius: 6px; }
 
