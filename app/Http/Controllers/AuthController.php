@@ -13,10 +13,14 @@ class AuthController extends Controller
     public function store(Request $request): RedirectResponse
     {
         $credentials = $request->validate([
-            'email' => ['required', 'email', 'max:254'],
+            'email' => ['required', 'string', 'max:254'],
             'password' => ['required', 'string', 'max:255'],
         ]);
         $credentials['email'] = mb_strtolower($credentials['email']);
+        if (app()->isLocal() && $credentials['email'] === 'admin') {
+            $credentials['email'] = 'tester@dossier.test';
+        }
+        validator($credentials, ['email' => ['email']])->validate();
 
         $key = 'login:'.sha1($credentials['email'].'|'.$request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {

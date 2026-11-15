@@ -10,7 +10,7 @@
             @include('partials.errors')
             <form method="post" action="{{ route('login.store') }}" class="stack">
                 @csrf
-                <label>Почта<input name="email" type="email" autocomplete="username" value="{{ old('email') }}" required autofocus></label>
+                <label>{{ app()->isLocal() ? 'Почта или логин' : 'Почта' }}<input name="email" type="{{ app()->isLocal() ? 'text' : 'email' }}" autocomplete="username" value="{{ old('email') }}" required autofocus></label>
                 <label>Пароль<input name="password" type="password" autocomplete="current-password" required></label>
                 <button class="button primary">Войти <span aria-hidden="true">↗</span></button>
             </form>
