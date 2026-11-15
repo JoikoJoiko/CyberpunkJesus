@@ -8,6 +8,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // Accounts are created via dossier:user or the authenticated account screen.
+        // Accounts are created via dossier:user.
     }
 }

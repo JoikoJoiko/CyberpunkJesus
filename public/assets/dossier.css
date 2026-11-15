@@ -73,7 +73,7 @@ h1 span { color: var(--hot); }
 .link:hover, .back-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 
 .panel { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); min-width: 0; }
-.metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
+.metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 18px 0; }
 .metric { padding: 16px 19px; display: grid; gap: 8px; }
 .metric:hover { border-color: #834568; }
 .metric-head { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 13px; font-weight: 650; }
@@ -95,7 +95,6 @@ h2 { font-size: 19px; line-height: 1.25; letter-spacing: -.025em; }
 .bar-row strong { color: var(--text); flex: none; }
 .bar-track { height: 7px; border-radius: 100px; background: #302334; overflow: hidden; }
 .bar-track span { display: block; width: var(--percent); height: 100%; background: linear-gradient(90deg, #a63c91, #ff76bb); border-radius: inherit; }
-.recent { margin-top: 16px; }
 .recent-row { padding: 12px 0; display: flex; justify-content: space-between; align-items: center; gap: 10px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
 .recent-row small { display: block; color: var(--muted); }
 a.recent-row:hover strong { color: var(--pink); }
@@ -105,7 +104,7 @@ a.recent-row:hover strong { color: var(--pink); }
 .page-head p { margin-top: 9px; }
 .page-head .button { flex: none; }
 .back-link { display: inline-block; margin-bottom: 8px; }
-.filters { display: grid; grid-template-columns: minmax(0, 1.35fr) repeat(3, minmax(0, 1fr)) auto; align-items: end; gap: 11px; padding: 16px; margin-bottom: 16px; }
+.filters { display: grid; grid-template-columns: minmax(0, 460px) auto; justify-content: start; align-items: end; gap: 11px; padding: 16px; margin-bottom: 16px; }
 label { display: grid; align-content: start; gap: 6px; min-width: 0; font-size: 14px; font-weight: 650; }
 label small { font-size: 12px; color: var(--muted); font-weight: 400; }
 input, select, textarea { width: 100%; min-width: 0; min-height: 43px; padding: 9px 11px; border: 1px solid #493951; border-radius: 8px; background: var(--field); color: var(--text); font-size: 15px; }
@@ -145,7 +144,6 @@ tbody tr:hover { background: #201825; }
 .summary-grid div { background: var(--field); padding: 12px; border-radius: 8px; }
 .summary-grid dt { font-size: 12px; color: var(--muted); }
 .summary-grid dd { font-weight: 750; overflow-wrap: anywhere; }
-.accounts-grid { grid-template-columns: 1fr 1fr; align-items: start; }
 
 .login-shell { min-height: 100vh; display: grid; grid-template-columns: 1fr minmax(340px, 42%); }
 .login-art { border-right: 1px solid var(--border); background: linear-gradient(0deg, #120d15bb, transparent 35%), #1e1220 url("cyber-jesus.webp") 83% center / cover no-repeat; }
@@ -160,10 +158,6 @@ dialog p { color: var(--muted); margin: 13px 0 20px; overflow-wrap: anywhere; }
 .sr-only, .skip-link:not(:focus) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .skip-link:focus { position: fixed; z-index: 2; top: 8px; left: 8px; background: var(--pink); color: var(--bg); padding: 8px; }
 
-@media (max-width: 1120px) {
-    .filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .filters .button { justify-self: start; }
-}
 @media (max-width: 850px) {
     .shell { grid-template-columns: minmax(0, 1fr); }
     .sidebar { position: static; height: auto; display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 12px 18px; border-right: 0; border-bottom: 1px solid var(--border); }
@@ -185,9 +179,6 @@ dialog p { color: var(--muted); margin: 13px 0 20px; overflow-wrap: anywhere; }
     .metric { padding: 12px; }
     .dash-grid, .report-grid, .field-grid { grid-template-columns: minmax(0, 1fr); }
     .page-head { align-items: start; flex-direction: column; }
-    .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .filter-search { grid-column: 1 / -1; }
-    .filters .button { align-self: end; }
     th, td { padding-inline: 11px; }
     .login-shell { grid-template-columns: 1fr; grid-template-rows: 195px 1fr; }
     .login-art { border-right: 0; border-bottom: 1px solid var(--border); background-position: center, right 42%; }

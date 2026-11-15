@@ -20,12 +20,9 @@ class DashboardController extends Controller
 
         return view('dashboard', [
             'playerCount' => Player::count(),
-            'serverCount' => Player::whereNotNull('server')->distinct()->count('server'),
             'answerCount' => Answer::count(),
             'questionCount' => Question::count(),
             'recent' => Player::latest('id')->limit(5)->withCount('answers')->get(),
-            'servers' => Player::whereNotNull('server')->groupBy('server')
-                ->selectRaw('server, COUNT(*) as total')->orderByDesc('total')->orderBy('server')->limit(6)->get(),
             'activity' => $days->map(fn ($day) => [
                 'label' => $day->format('d.m'),
                 'count' => (int) ($activity[$day->toDateString()] ?? 0),

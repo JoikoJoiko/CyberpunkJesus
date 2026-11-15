@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Player extends Model
 {
-    protected $fillable = ['nickname', 'server', 'notes', 'interviewed_on'];
+    protected $fillable = ['nickname', 'notes', 'interviewed_on'];
 
     protected function casts(): array
     {

@@ -19,63 +19,21 @@ class PlayerController extends Controller
     {
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
-            'server' => ['nullable', 'string', 'max:100'],
-            'sort' => ['nullable', 'string', 'max:40'],
-            'direction' => ['nullable', 'in:asc,desc'],
         ]);
-        $questions = Question::ordered()->get();
-        $query = Player::query()->select('players.*')->withCount('answers');
+        $query = Player::query()->withCount('answers');
         $search = $filters['q'] ?? '';
-        $server = $filters['server'] ?? '';
-        $sort = $filters['sort'] ?? 'created_at';
-        $direction = $filters['direction'] ?? 'desc';
-        $sortQuestion = $questions->first(fn (Question $question) => 'question_'.$question->id === $sort);
 
         if ($search !== '') {
             $like = '%'.strtr($search, ['!' => '!!', '%' => '!%', '_' => '!_']).'%';
             $query->where(function ($query) use ($like) {
                 $query->whereRaw("nickname LIKE ? ESCAPE '!'", [$like])
-                    ->orWhereRaw("server LIKE ? ESCAPE '!'", [$like])
                     ->orWhereRaw("notes LIKE ? ESCAPE '!'", [$like]);
             });
         }
 
-        if ($server !== '') {
-            $query->where('players.server', $server);
-        }
+        $players = $query->latest('id')->paginate(15)->appends($filters);
 
-        $columns = [
-            'created_at' => 'players.created_at',
-            'nickname' => 'players.nickname',
-            'server' => 'players.server',
-            'interviewed_on' => 'players.interviewed_on',
-        ];
-        $column = $columns[$sort] ?? $columns['created_at'];
-
-        if ($sortQuestion) {
-            $query->leftJoin('answers as sorting_answer', function ($join) use ($sortQuestion) {
-                $join->on('sorting_answer.player_id', '=', 'players.id')
-                    ->where('sorting_answer.question_id', $sortQuestion->id);
-            })->addSelect('sorting_answer.value as sorted_value');
-
-            $column = $sortQuestion->type === QuestionType::Number
-                ? 'sorting_answer.numeric_value'
-                : 'sorting_answer.value';
-        } else {
-            $sort = isset($columns[$sort]) ? $sort : 'created_at';
-        }
-
-        $players = $query->orderByRaw("CASE WHEN {$column} IS NULL THEN 1 ELSE 0 END")
-            ->orderBy($column, $direction)
-            ->orderByDesc('players.id')
-            ->paginate(15)
-            ->withQueryString();
-
-        $servers = Player::query()->whereNotNull('server')->distinct()->orderBy('server')->pluck('server');
-
-        return view('players.index', compact(
-            'players', 'questions', 'servers', 'search', 'server', 'sort', 'direction', 'sortQuestion'
-        ));
+        return view('players.index', compact('players', 'search'));
     }
 
     public function create(): View
@@ -118,7 +76,6 @@ class PlayerController extends Controller
     {
         $meta = $request->validate([
             'nickname' => ['nullable', 'string', 'max:100'],
-            'server' => ['nullable', 'string', 'max:100'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'interviewed_on' => ['nullable', ...QuestionType::Date->rules()],
             'questionnaire_revision' => ['required', 'integer'],
@@ -154,7 +111,7 @@ class PlayerController extends Controller
             }
             $values = validator(['answers' => $input], $rules, [], $labels)->validate()['answers'] ?? [];
 
-            $player->fill($request->only(['nickname', 'server', 'notes', 'interviewed_on']));
+            $player->fill($request->only(['nickname', 'notes', 'interviewed_on']));
             if ($existing) {
                 $player->revision++;
             }

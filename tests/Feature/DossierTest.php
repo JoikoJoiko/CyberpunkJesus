@@ -16,19 +16,19 @@ class DossierTest extends TestCase
 
     public function test_all_archive_pages_require_login_and_a_colleague_can_sign_in(): void
     {
-        foreach (['dashboard', 'players.index', 'questions.index', 'reports.answers', 'accounts.index'] as $route) {
+        foreach (['dashboard', 'players.index', 'questions.index', 'reports.answers'] as $route) {
             $this->get(route($route))->assertRedirect(route('login'));
         }
         $this->get(route('login'))->assertOk()->assertSee('Вход в архив');
 
         $owner = User::factory()->create();
-        $this->actingAs($owner)->get(route('accounts.index'))->assertOk();
-        $this->post(route('accounts.store'), [
+        User::factory()->create([
             'name' => 'Участница',
             'email' => 'friend@example.test',
             'password' => 'unique-test-password',
-            'password_confirmation' => 'unique-test-password',
-        ])->assertRedirect(route('accounts.index'));
+        ]);
+        $this->actingAs($owner)->get('/accounts')->assertNotFound();
+        $this->post('/accounts')->assertNotFound();
 
         $this->post(route('logout'))->assertRedirect(route('login'));
         $this->post(route('login.store'), [
@@ -38,7 +38,7 @@ class DossierTest extends TestCase
         $this->get(route('dashboard'))->assertOk()->assertSee('Грехометр');
     }
 
-    public function test_dynamic_answers_are_optional_sort_numerically_and_cascade_on_delete(): void
+    public function test_dynamic_answers_are_optional_and_cascade_on_delete(): void
     {
         $this->actingAs(User::factory()->create());
 
@@ -60,7 +60,6 @@ class DossierTest extends TestCase
         foreach (['Десять' => '10', 'Два' => '2,50'] as $nickname => $answer) {
             $this->post(route('players.store'), [
                 'nickname' => $nickname,
-                'server' => 'Neon',
                 'interviewed_on' => '2026-11-15',
                 'questionnaire_revision' => $revision,
                 'answers' => [$question->id => $answer],
@@ -68,12 +67,10 @@ class DossierTest extends TestCase
         }
 
         $this->assertDatabaseHas('answers', ['value' => '2.5', 'numeric_value' => 2.5]);
-        $this->get(route('players.index', ['sort' => 'question_'.$question->id, 'direction' => 'asc']))
-            ->assertOk()->assertSeeInOrder(['Два', 'Десять', 'Без ника']);
-        $this->get(route('players.index', ['server' => 'Neon', 'q' => 'Два']))
+        $this->get(route('players.index', ['q' => 'Два']))
             ->assertOk()->assertSee('Два')->assertDontSee('Десять');
         $this->get(route('reports.answers'))->assertOk()->assertSee('6.25');
-        $this->get(route('dashboard'))->assertOk()->assertSee('Neon');
+        $this->get(route('dashboard'))->assertOk()->assertSee('Два');
 
         $player = Player::where('nickname', 'Два')->firstOrFail();
         $this->get(route('players.edit', $player))->assertOk()->assertSee('2.5');

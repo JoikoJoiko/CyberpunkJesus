@@ -16,7 +16,6 @@
         <header class="section-head"><h2>Об игроке</h2></header>
         <div class="field-grid">
             <label>Ник<input type="text" name="nickname" maxlength="100" value="{{ old('nickname', $player->nickname) }}" placeholder="Например, PixelGhost"></label>
-            <label>Сервер<input type="text" name="server" maxlength="100" value="{{ old('server', $player->server) }}"></label>
             <label>Дата опроса<input type="date" name="interviewed_on" min="1000-01-01" max="9999-12-31" value="{{ old('interviewed_on', $player->interviewed_on?->toDateString()) }}"></label>
             <label class="wide">Примечание<textarea name="notes" rows="3" maxlength="5000">{{ old('notes', $player->notes) }}</textarea></label>
         </div>

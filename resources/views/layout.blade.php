@@ -19,7 +19,6 @@
                 <a @class(['nav-link', 'active' => request()->routeIs('players.*')]) href="{{ route('players.index') }}" @if(request()->routeIs('players.*')) aria-current="page" @endif><span aria-hidden="true">▤</span> Игроки</a>
                 <a @class(['nav-link', 'active' => request()->routeIs('questions.*')]) href="{{ route('questions.index') }}" @if(request()->routeIs('questions.*')) aria-current="page" @endif><span aria-hidden="true">☷</span> Вопросы</a>
                 <a @class(['nav-link', 'active' => request()->routeIs('reports.*')]) href="{{ route('reports.answers') }}" @if(request()->routeIs('reports.*')) aria-current="page" @endif><span aria-hidden="true">◩</span> Ответы</a>
-                <a @class(['nav-link', 'active' => request()->routeIs('accounts.*')]) href="{{ route('accounts.index') }}" @if(request()->routeIs('accounts.*')) aria-current="page" @endif><span aria-hidden="true">♙</span> Аккаунты</a>
             </nav>
             <div class="session">
                 <div class="avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</div>
