@@ -15,13 +15,14 @@
 @if($players->isNotEmpty())
     <div class="table-scroll" tabindex="0" role="region" aria-label="Таблица игроков">
         <table>
-            <thead><tr><th>Ник</th><th>Дата опроса</th><th>Ответы</th><th><span class="sr-only">Действия</span></th></tr></thead>
+            <thead><tr><th>Ник</th><th>Возраст</th><th>Дата опроса</th><th>Ответы</th><th><span class="sr-only">Действия</span></th></tr></thead>
             <tbody>
             @foreach($players as $player)
                 <tr>
                     <td><a class="row-title" href="{{ route('players.edit', $player) }}">{{ $player->nickname ?? 'Без ника' }}</a>
                         @if($player->notes)<small class="row-note">{{ str($player->notes)->limit(85) }}</small>@endif
                     </td>
+                    <td>{{ \App\Models\Player::ageFrom($player->birth_date) ?? '—' }}</td>
                     <td>{{ $player->interviewed_on?->format('d.m.Y') ?? '—' }}</td>
                     <td>{{ $player->answers_count }}</td>
                     <td><a class="link" href="{{ route('players.edit', $player) }}">Открыть →</a></td>

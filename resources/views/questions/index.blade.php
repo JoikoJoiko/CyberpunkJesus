@@ -13,7 +13,9 @@
                 <tbody>
                 @foreach($questions as $question)
                     <tr>
-                        <td><a class="row-title" href="{{ route('questions.edit', $question) }}">{{ $question->label }}</a></td>
+                        <td><a class="row-title" href="{{ route('questions.edit', $question) }}">{{ $question->label }}</a>
+                            <small class="row-note"><code>{{ $question->code }}</code>@if($question->block) · {{ $question->block }}@endif</small>
+                        </td>
                         <td><span class="tag">{{ $question->type->label() }}</span></td>
                         <td>{{ $question->position }}</td>
                         <td><a class="link" href="{{ route('reports.answers', $question) }}">{{ $question->answers_count }} ↗</a></td>

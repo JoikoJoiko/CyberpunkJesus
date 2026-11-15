@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\ChangeLog;
+use App\Models\Answer;
 use App\Models\Player;
 use App\Models\Question;
 use App\Models\Questionnaire;
@@ -20,7 +21,12 @@ class PlayerController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
         ]);
-        $query = Player::query()->withCount(['answers' => fn ($query) => $query->answered()]);
+        $query = Player::query()->withCount(['answers' => fn ($query) => $query->answered()])
+            ->addSelect(['birth_date' => Answer::query()->select('answers.value')
+                ->join('questions', 'questions.id', '=', 'answers.question_id')
+                ->whereColumn('answers.player_id', 'players.id')
+                ->where('questions.code', Question::BIRTH_DATE_CODE)
+                ->limit(1)]);
         $search = $filters['q'] ?? '';
 
         if ($search !== '') {
@@ -72,8 +78,11 @@ class PlayerController extends Controller
         $revision = Questionnaire::revision();
         $questions = Question::ordered()->get();
         $answers = $player->exists ? $player->answers()->get()->keyBy('question_id') : collect();
+        $birthQuestion = $questions->firstWhere('code', Question::BIRTH_DATE_CODE);
+        $age = Player::ageFrom($answers->get($birthQuestion?->id)?->value);
+        $blocks = $questions->groupBy(fn (Question $question) => $question->block ?? '');
 
-        return view('players.form', compact('player', 'revision', 'questions', 'answers'));
+        return view('players.form', compact('player', 'revision', 'blocks', 'answers', 'age'));
     }
 
     private function save(Request $request, ?Player $existing = null): RedirectResponse

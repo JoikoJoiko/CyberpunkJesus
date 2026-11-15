@@ -2,7 +2,6 @@
 @section('title', 'Вход')
 @section('content')
 <main class="login-shell">
-    <div class="login-art" aria-hidden="true"></div>
     <section class="login-side" aria-labelledby="login-title">
         <div class="login-card">
             <div class="brand"><span class="brand-mark" aria-hidden="true">✝</span><span>ГРЕХОМЕТР<small>АРХИВ ОПРОСОВ</small></span></div>

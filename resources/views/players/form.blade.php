@@ -1,9 +1,11 @@
 @extends('layout')
 @section('title', $player->exists ? 'Анкета игрока' : 'Новая анкета')
 @section('content')
+<div class="form-frame">
 <a class="back-link" href="{{ route('players.index') }}">← К списку игроков</a>
 <header class="page-head">
     <div><h1>{{ $player->exists ? ($player->nickname ?? 'Анкета без ника') : 'Новая анкета' }}<span>.</span></h1><p>Заполните любые поля и сохраните анкету.</p></div>
+    @if($age !== null)<span class="tag">Возраст · {{ $age }}</span>@endif
 </header>
 
 <form method="post" action="{{ $player->exists ? route('players.update', $player) : route('players.store') }}" class="stack form-page">
@@ -23,8 +25,10 @@
 
     <section class="panel section-panel">
         <header class="section-head"><h2>Вопросы опроса</h2><a class="link" href="{{ route('questions.index') }}">К списку вопросов ↗</a></header>
-        <div class="field-grid">
-        @forelse($questions as $question)
+        @forelse($blocks as $block => $questions)
+        <fieldset class="question-block field-grid">
+        <legend>{{ $block !== '' ? $block : 'Без блока' }}</legend>
+        @foreach($questions as $question)
             @php
                 $field = 'answers['.$question->id.']';
                 $answer = $answers->get($question->id);
@@ -71,10 +75,11 @@
                 </label>
             </details>
             </div>
+        @endforeach
+        </fieldset>
         @empty
             <div class="wide empty compact"><p>Список вопросов пуст.</p><a class="link" href="{{ route('questions.create') }}">Добавить вопрос →</a></div>
         @endforelse
-        </div>
     </section>
 
     <div class="actions">
@@ -92,4 +97,5 @@
         <button class="button danger">Удалить анкету</button>
     </form>
 @endif
+</div>
 @endsection

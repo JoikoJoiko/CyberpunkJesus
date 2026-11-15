@@ -22,7 +22,13 @@
                 <a @class(['nav-link', 'active' => request()->routeIs('history.*')]) href="{{ route('history.index') }}" @if(request()->routeIs('history.*')) aria-current="page" @endif><span aria-hidden="true">◷</span> История</a>
             </nav>
             <div class="session">
-                <div class="avatar" aria-hidden="true">{{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}</div>
+                <a class="avatar" href="{{ route('profile.edit') }}" aria-label="Изменить аватар" title="Изменить аватар">
+                    @if(\Illuminate\Support\Facades\Storage::disk('local')->exists(auth()->user()->avatarPath()))
+                        <img src="{{ route('avatar.show') }}" alt="">
+                    @else
+                        {{ mb_strtoupper(mb_substr(auth()->user()->name, 0, 1)) }}
+                    @endif
+                </a>
                 <div class="session-user"><strong>{{ auth()->user()->name }}</strong>
                     <form method="post" action="{{ route('logout') }}">@csrf<button class="signout">Выйти ↗</button></form>
                 </div>

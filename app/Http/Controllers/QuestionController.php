@@ -9,6 +9,7 @@ use App\Models\QuestionType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -25,6 +26,7 @@ class QuestionController extends Controller
     public function create(): View
     {
         return view('questions.form', [
+            'blocks' => $this->blocks(),
             'question' => new Question([
                 'type' => QuestionType::Text,
                 'position' => min(99999, Question::max('position') + 10),
@@ -34,7 +36,12 @@ class QuestionController extends Controller
 
     public function edit(Question $question): View
     {
-        return view('questions.form', compact('question'));
+        return view('questions.form', ['question' => $question, 'blocks' => $this->blocks()]);
+    }
+
+    private function blocks()
+    {
+        return Question::whereNotNull('block')->distinct()->orderBy('block')->pluck('block');
     }
 
     public function store(Request $request): RedirectResponse
@@ -67,6 +74,10 @@ class QuestionController extends Controller
             'type' => ['required', Rule::enum(QuestionType::class)],
             'position' => ['required', 'integer', 'between:0,99999'],
             'option_lines' => ['nullable', 'string', 'max:6000'],
+            'code' => ['nullable', 'string', 'max:64', 'regex:/^[a-zA-Z_][a-zA-Z0-9_]*$/D'],
+            'block' => ['nullable', 'string', 'max:100'],
+        ], [
+            'code.regex' => 'Код должен начинаться с латинской буквы или подчёркивания и содержать только латиницу, цифры и подчёркивания.',
         ]);
         $type = QuestionType::from($data['type']);
         $options = null;
@@ -88,6 +99,27 @@ class QuestionController extends Controller
         DB::transaction(function () use ($request, $existing, $data, $type, $options) {
             Questionnaire::revision(lock: true);
             $question = $existing ? Question::findOrFail($existing->id) : new Question;
+            $code = $data['code'] ?? $question->code;
+            $used = Question::query()->when($existing, fn ($query) => $query->whereKeyNot($question->id));
+            $codeExists = fn (string $value) => (clone $used)->whereRaw('LOWER(code) = ?', [strtolower($value)])->exists();
+
+            if ($code === null) {
+                $base = Str::snake(Str::camel(Str::slug($data['label'])));
+                $base = preg_match('/^[a-z_]/', $base) ? substr($base, 0, 50) : 'question';
+                $code = $base;
+                for ($suffix = 2; strcasecmp($code, Question::BIRTH_DATE_CODE) === 0 || $codeExists($code); $suffix++) {
+                    $code = $base.'_'.$suffix;
+                }
+            } elseif ($codeExists($code)) {
+                throw ValidationException::withMessages(['code' => 'Этот код уже используется.']);
+            }
+
+            if (strcasecmp($code, Question::BIRTH_DATE_CODE) === 0) {
+                if ($type !== QuestionType::Date) {
+                    throw ValidationException::withMessages(['type' => 'Для кода birthDate выберите тип «Дата».']);
+                }
+                $code = Question::BIRTH_DATE_CODE;
+            }
 
             if ($existing && ($type !== $question->type || $options !== $question->options)) {
                 foreach ($question->answers()->answered()->lazyById() as $answer) {
@@ -114,12 +146,14 @@ class QuestionController extends Controller
                 }
             }
 
-            $question->fill($data)->fill(['type' => $type, 'options' => $options]);
+            $question->fill($data)->fill(['type' => $type, 'options' => $options, 'code' => $code]);
             $fields = array_values(array_intersect_key([
                 'label' => 'Текст вопроса',
                 'type' => 'Тип ответа',
                 'options' => 'Варианты ответа',
                 'position' => 'Порядок в анкете',
+                'code' => 'Символьный код',
+                'block' => 'Блок',
             ], $question->getDirty()));
             if ($existing && $fields === []) {
                 return;

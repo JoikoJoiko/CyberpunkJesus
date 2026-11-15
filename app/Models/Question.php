@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Question extends Model
 {
-    protected $fillable = ['label', 'type', 'options', 'position'];
+    public const BIRTH_DATE_CODE = 'birthDate';
+
+    protected $fillable = ['label', 'type', 'options', 'position', 'code', 'block'];
 
     protected function casts(): array
     {

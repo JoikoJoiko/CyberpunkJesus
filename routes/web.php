@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\AvatarController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\PlayerController;
@@ -18,5 +19,8 @@ Route::middleware('auth')->group(function () {
     Route::resource('players', PlayerController::class)->except('show');
     Route::resource('questions', QuestionController::class)->except('show');
     Route::get('/history', [HistoryController::class, 'index'])->name('history.index');
+    Route::view('/profile', 'profile')->name('profile.edit');
+    Route::get('/profile/avatar', [AvatarController::class, 'show'])->name('avatar.show');
+    Route::post('/profile/avatar', [AvatarController::class, 'update'])->name('avatar.update');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 });

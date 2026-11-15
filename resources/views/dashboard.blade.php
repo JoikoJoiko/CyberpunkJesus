@@ -4,7 +4,6 @@
 <section class="hero" aria-labelledby="dashboard-title">
     <div class="hero-copy">
         <h1 id="dashboard-title">Грехометр<span>.</span></h1>
-        <p>Анкеты игроков и статистика ответов в одном архиве.</p>
         <a class="button primary" href="{{ route('players.create') }}"><span aria-hidden="true">+</span> Новая анкета</a>
     </div>
 </section>

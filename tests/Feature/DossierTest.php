@@ -9,11 +9,45 @@ use App\Models\Question;
 use App\Models\Questionnaire;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class DossierTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_question_codes_and_blocks_display_the_current_age(): void
+    {
+        $this->travelTo(now()->setDate(2026, 11, 15));
+        $this->actingAs(User::factory()->create());
+        $data = ['label' => 'Дата рождения', 'type' => 'date', 'position' => 10, 'block' => 'Антропометрия'];
+        $this->post(route('questions.store'), [...$data, 'code' => 'birthDate'])->assertRedirect();
+        $this->post(route('questions.store'), [...$data, 'code' => 'BIRTHDATE'])->assertSessionHasErrors('code');
+        $this->post(route('questions.store'), $data)->assertRedirect(route('questions.index'));
+        $this->assertNotEmpty(Question::latest('id')->firstOrFail()->code);
+        $question = Question::where('code', 'birthDate')->firstOrFail();
+        $this->post(route('players.store'), [
+            'nickname' => 'PixelGhost',
+            'questionnaire_revision' => Questionnaire::revision(),
+            'answers' => [$question->id => '2000-11-16'],
+        ])->assertRedirect(route('players.index'));
+        $this->get(route('players.index'))->assertOk()->assertSee('Возраст')->assertSee('25');
+        $this->get(route('players.edit', Player::sole()))->assertOk()
+            ->assertSee('Возраст · 25')->assertSee('Антропометрия');
+    }
+
+    public function test_avatar_upload_belongs_to_the_signed_in_account(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $this->get(route('avatar.show'))->assertRedirect(route('login'));
+        $this->actingAs($user)->post(route('avatar.update'), ['avatar' => UploadedFile::fake()->image('avatar.png')])
+            ->assertRedirect(route('profile.edit'));
+        Storage::disk('local')->assertExists($user->avatarPath());
+        $this->get(route('avatar.show'))->assertOk();
+        $this->actingAs(User::factory()->create())->get(route('avatar.show'))->assertNotFound();
+    }
 
     public function test_all_archive_pages_require_login_and_a_colleague_can_sign_in(): void
     {
