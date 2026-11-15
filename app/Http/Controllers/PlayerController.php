@@ -20,7 +20,7 @@ class PlayerController extends Controller
         $filters = $request->validate([
             'q' => ['nullable', 'string', 'max:100'],
         ]);
-        $query = Player::query()->withCount('answers');
+        $query = Player::query()->withCount(['answers' => fn ($query) => $query->answered()]);
         $search = $filters['q'] ?? '';
 
         if ($search !== '') {
@@ -67,7 +67,7 @@ class PlayerController extends Controller
     {
         $revision = Questionnaire::revision();
         $questions = Question::ordered()->get();
-        $answers = $player->exists ? $player->answers()->pluck('value', 'question_id') : collect();
+        $answers = $player->exists ? $player->answers()->get()->keyBy('question_id') : collect();
 
         return view('players.form', compact('player', 'revision', 'questions', 'answers'));
     }
@@ -81,6 +81,7 @@ class PlayerController extends Controller
             'questionnaire_revision' => ['required', 'integer'],
             'player_revision' => [$existing ? 'required' : 'nullable', 'integer'],
             'answers' => ['nullable', 'array'],
+            'clarifications' => ['nullable', 'array'],
         ]);
 
         DB::transaction(function () use ($request, $existing, $meta) {
@@ -101,15 +102,17 @@ class PlayerController extends Controller
             $rules = [];
             $labels = [];
             $input = $meta['answers'] ?? [];
+            $clarifications = $meta['clarifications'] ?? [];
             foreach ($questions as $question) {
                 $key = "answers.{$question->id}";
                 $rules[$key] = ['nullable', ...$question->type->rules($question->options ?? [])];
                 $labels[$key] = $question->label;
+                $rules["clarifications.{$question->id}"] = ['nullable', 'string', 'max:5000'];
                 if ($question->type === QuestionType::Number && is_string($input[$question->id] ?? null)) {
                     $input[$question->id] = str_replace(',', '.', $input[$question->id]);
                 }
             }
-            $values = validator(['answers' => $input], $rules, [], $labels)->validate()['answers'] ?? [];
+            $validated = validator(['answers' => $input, 'clarifications' => $clarifications], $rules, [], $labels)->validate();
 
             $player->fill($request->only(['nickname', 'notes', 'interviewed_on']));
             if ($existing) {
@@ -118,20 +121,25 @@ class PlayerController extends Controller
             $player->save();
 
             $rows = [];
+            $previousAnswers = $existing ? $player->answers()->get()->keyBy('question_id') : collect();
             foreach ($questions as $question) {
-                $value = $values[$question->id] ?? null;
-                if ($value !== null) {
+                $value = $validated['answers'][$question->id] ?? null;
+                $clarification = array_key_exists($question->id, $clarifications)
+                    ? $validated['clarifications'][$question->id] ?? null
+                    : $previousAnswers->get($question->id)?->clarification;
+                if ($value !== null || $clarification !== null) {
                     $rows[] = [
                         'player_id' => $player->id,
                         'question_id' => $question->id,
-                        ...$question->type->answerAttributes($value),
+                        'clarification' => $clarification,
+                        ...($value === null ? ['value' => null, 'numeric_value' => null] : $question->type->answerAttributes($value)),
                     ];
                 }
             }
 
             $player->answers()->whereNotIn('question_id', array_column($rows, 'question_id'))->delete();
             if ($rows !== []) {
-                Answer::query()->upsert($rows, ['player_id', 'question_id'], ['value', 'numeric_value']);
+                Answer::query()->upsert($rows, ['player_id', 'question_id'], ['value', 'numeric_value', 'clarification']);
             }
         }, attempts: 3);
 

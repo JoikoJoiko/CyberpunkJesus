@@ -24,8 +24,8 @@
 @if($question->exists)
     <section class="delete-section" aria-labelledby="remove-question">
         <h2 id="remove-question">Удаление вопроса</h2>
-        <p>Из всех анкет будут удалены ответы на этот вопрос ({{ $question->answers_count }}).</p>
-        <form method="post" action="{{ route('questions.destroy', $question) }}" data-confirm="Вопрос «{{ $question->label }}» и все ответы на него будут удалены из всех анкет.">
+        <p>Из всех анкет будут удалены ответы и уточнения к этому вопросу.</p>
+        <form method="post" action="{{ route('questions.destroy', $question) }}" data-confirm="Вопрос «{{ $question->label }}», ответы и уточнения будут удалены из всех анкет.">
             @csrf @method('DELETE')
             <button class="button danger">Удалить вопрос</button>
         </form>

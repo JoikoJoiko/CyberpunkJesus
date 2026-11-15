@@ -27,10 +27,15 @@
         @forelse($questions as $question)
             @php
                 $field = 'answers['.$question->id.']';
-                $oldValue = old('answers.'.$question->id, $answers->get($question->id, ''));
+                $answer = $answers->get($question->id);
+                $oldValue = old('answers.'.$question->id, $answer?->value);
                 $value = is_scalar($oldValue) ? (string) $oldValue : '';
+                $clarificationKey = 'clarifications.'.$question->id;
+                $oldClarification = old($clarificationKey, $answer?->clarification);
+                $clarification = is_string($oldClarification) ? $oldClarification : '';
             @endphp
-            <label @class(['wide' => $question->type === \App\Models\QuestionType::Paragraph])>
+            <div @class(['question-field', 'wide' => $question->type === \App\Models\QuestionType::Paragraph])>
+            <label>
             {{ $question->label }}
             @switch($question->type)
                 @case(\App\Models\QuestionType::Paragraph)
@@ -53,6 +58,19 @@
             @endswitch
             @error('answers.'.$question->id)<small class="field-error">{{ $message }}</small>@enderror
             </label>
+            <details class="clarification" @if($errors->has($clarificationKey)) open @endif>
+                <summary @class(['clarification-toggle', 'has-clarification' => $clarification !== ''])
+                    aria-label="Уточнение к вопросу «{{ $question->label }}»{{ $clarification !== '' ? ' (есть текст)' : '' }}"
+                    title="Уточнение к ответу">
+                    <span class="clarification-closed" aria-hidden="true">+</span>
+                    <span class="clarification-open" aria-hidden="true">−</span>
+                </summary>
+                <label>Уточнение к ответу
+                    <textarea name="clarifications[{{ $question->id }}]" rows="2" maxlength="5000">{{ $clarification }}</textarea>
+                    @error($clarificationKey)<small class="field-error">{{ $message }}</small>@enderror
+                </label>
+            </details>
+            </div>
         @empty
             <div class="wide empty compact"><p>Список вопросов пуст.</p><a class="link" href="{{ route('questions.create') }}">Добавить вопрос →</a></div>
         @endforelse
@@ -69,7 +87,7 @@
     </div>
 </form>
 @if($player->exists)
-    <form class="delete-section" method="post" action="{{ route('players.destroy', $player) }}" data-confirm="Анкета и все ответы этого игрока будут удалены из архива.">
+    <form class="delete-section" method="post" action="{{ route('players.destroy', $player) }}" data-confirm="Анкета, ответы и уточнения этого игрока будут удалены из архива.">
         @csrf @method('DELETE')
         <button class="button danger">Удалить анкету</button>
     </form>

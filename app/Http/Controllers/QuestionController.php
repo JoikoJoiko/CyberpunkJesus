@@ -17,7 +17,7 @@ class QuestionController extends Controller
     public function index(): View
     {
         return view('questions.index', [
-            'questions' => Question::ordered()->withCount('answers')->get(),
+            'questions' => Question::ordered()->withCount(['answers' => fn ($query) => $query->answered()])->get(),
         ]);
     }
 
@@ -33,7 +33,7 @@ class QuestionController extends Controller
 
     public function edit(Question $question): View
     {
-        return view('questions.form', ['question' => $question->loadCount('answers')]);
+        return view('questions.form', compact('question'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -54,7 +54,7 @@ class QuestionController extends Controller
             Questionnaire::advance();
         }, attempts: 3);
 
-        return to_route('questions.index')->with('status', 'Вопрос и его ответы удалены.');
+        return to_route('questions.index')->with('status', 'Вопрос, ответы и уточнения удалены.');
     }
 
     private function save(Request $request, ?Question $existing = null): RedirectResponse
@@ -87,7 +87,7 @@ class QuestionController extends Controller
             $question = $existing ? Question::findOrFail($existing->id) : new Question;
 
             if ($existing && ($type !== $question->type || $options !== $question->options)) {
-                foreach ($question->answers()->lazyById() as $answer) {
+                foreach ($question->answers()->answered()->lazyById() as $answer) {
                     $value = $question->type === QuestionType::Boolean && $type !== QuestionType::Number
                         ? $question->displayAnswer($answer->value)
                         : $answer->value;

@@ -63,6 +63,7 @@ class DossierTest extends TestCase
                 'interviewed_on' => '2026-11-15',
                 'questionnaire_revision' => $revision,
                 'answers' => [$question->id => $answer],
+                'clarifications' => [$question->id => 'Как считает игрок'],
             ])->assertRedirect(route('players.index'));
         }
 
@@ -73,15 +74,15 @@ class DossierTest extends TestCase
         $this->get(route('dashboard'))->assertOk()->assertSee('Два');
 
         $player = Player::where('nickname', 'Два')->firstOrFail();
-        $this->get(route('players.edit', $player))->assertOk()->assertSee('2.5');
+        $this->get(route('players.edit', $player))->assertOk()->assertSee('2.5')->assertSee('Как считает игрок');
         $this->put(route('players.update', $player), [
             'nickname' => 'Два',
             'questionnaire_revision' => $revision,
             'player_revision' => $player->revision,
             'answers' => [$question->id => ''],
         ])->assertRedirect(route('players.index'));
-        $this->assertDatabaseMissing('answers', ['player_id' => $player->id]);
-        $this->assertDatabaseCount('answers', 1);
+        $this->assertDatabaseHas('answers', ['player_id' => $player->id, 'value' => null, 'clarification' => 'Как считает игрок']);
+        $this->get(route('reports.answers'))->assertOk()->assertSee('Заполнено 1 из 3 анкет');
 
         $this->delete(route('questions.destroy', $question))->assertRedirect(route('questions.index'));
         $this->assertDatabaseCount('questions', 0);

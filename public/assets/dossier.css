@@ -127,6 +127,15 @@ tbody tr:hover { background: #201825; }
 .form-page, .delete-section { max-width: 880px; }
 .field-grid, .summary-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .wide { grid-column: 1 / -1; }
+.question-field { position: relative; min-width: 0; }
+.question-field > label { grid-template-columns: minmax(0, 1fr) 31px; overflow-wrap: anywhere; }
+.question-field > label > * { grid-column: 1 / -1; }
+.clarification-toggle { display: grid; place-items: center; position: absolute; top: -5px; right: 0; width: 29px; height: 29px; border: 1px solid var(--border); border-radius: 7px; color: var(--muted); cursor: pointer; }
+.clarification-toggle::-webkit-details-marker { display: none; }
+.clarification-toggle:hover, .clarification-toggle.has-clarification, .clarification[open] > summary { background: var(--pink-bg); color: var(--pink); }
+.clarification-open, .clarification[open] .clarification-closed { display: none; }
+.clarification[open] .clarification-open { display: inline; }
+.clarification > label { margin-top: 8px; color: var(--muted); }
 .actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .delete-section { display: grid; justify-items: start; gap: 9px; margin-top: 26px; padding-top: 17px; border-top: 1px solid var(--border); }
 .empty { min-height: 175px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px; text-align: center; padding: 24px 18px; }

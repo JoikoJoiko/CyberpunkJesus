@@ -20,9 +20,9 @@ class DashboardController extends Controller
 
         return view('dashboard', [
             'playerCount' => Player::count(),
-            'answerCount' => Answer::count(),
+            'answerCount' => Answer::answered()->count(),
             'questionCount' => Question::count(),
-            'recent' => Player::latest('id')->limit(5)->withCount('answers')->get(),
+            'recent' => Player::latest('id')->limit(5)->withCount(['answers' => fn ($query) => $query->answered()])->get(),
             'activity' => $days->map(fn ($day) => [
                 'label' => $day->format('d.m'),
                 'count' => (int) ($activity[$day->toDateString()] ?? 0),
@@ -32,14 +32,14 @@ class DashboardController extends Controller
 
     public function answers(?Question $question = null): View
     {
-        $questions = Question::ordered()->withCount('answers')->get();
+        $questions = Question::ordered()->withCount(['answers' => fn ($query) => $query->answered()])->get();
         $playerCount = Player::count();
         $selected = $question ? $questions->firstWhere('id', $question->id) : $questions->first();
         $distribution = collect();
         $summary = null;
 
         if ($selected && $selected->answers_count > 0) {
-            $answers = $selected->answers();
+            $answers = $selected->answers()->answered();
             $distribution = (clone $answers)->toBase()
                 ->selectRaw('value, COUNT(*) as total')
                 ->groupBy('value')->orderByDesc('total')->orderBy('value')->limit(8)->get();
