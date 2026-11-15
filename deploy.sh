@@ -14,7 +14,7 @@ command -v apt-get >/dev/null || { printf 'Debian or Ubuntu with apt is required
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y apache2 libapache2-mod-php php-cli php-curl php-mbstring php-sqlite3 php-xml php-zip composer rsync sqlite3 curl
+apt-get install -y apache2 libapache2-mod-php php-cli php-curl php-gd php-mbstring php-sqlite3 php-xml php-zip composer rsync sqlite3 curl
 php -r 'exit(version_compare(PHP_VERSION, "8.2.0", "<") ? 1 : 0);' || {
     printf 'PHP 8.2 or newer is required.\n' >&2
     exit 1
