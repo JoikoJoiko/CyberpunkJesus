@@ -1,66 +1,48 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Грехометр
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Закрытый архив опросов игроков. Laravel 12, Blade, SQLite по умолчанию. Для интерфейса достаточно PHP и Composer.
 
-## About Laravel
+## Что есть в архиве
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Игроки.** Ник, сервер, дата опроса, примечание и ответы на текущие вопросы. Можно оставить пустым любое поле или всю анкету. Список поддерживает поиск, фильтр по серверу и сортировку по базовым полям или ответу на конкретный вопрос. Пустые значения идут в конец.
+- **Вопросы.** Короткий или длинный текст, число, дата, «Да / Нет» и выбор из списка. Вопросы можно добавлять, редактировать, менять порядок и удалять. При удалении вопроса база сразу удаляет все его ответы. При смене типа или вариантов сохранение пройдёт, только если все существующие ответы подходят.
+- **Обзор.** Число анкет, серверов, вопросов и ответов, график добавления анкет за 14 дней и список самых популярных серверов.
+- **Ответы.** Заполненность и частые ответы по выбранному вопросу. Для чисел есть минимум, среднее и максимум, для дат — диапазон.
+- **Аккаунты.** У участников одинаковый доступ к общему архиву. Следующий аккаунт создаётся в разделе «Аккаунты».
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Запуск локально
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Нужны PHP 8.2+ с расширением `pdo_sqlite` и Composer. В PowerShell из корня проекта выполните:
 
-## Learning Laravel
+```powershell
+composer install
+Copy-Item .env.example .env
+php artisan key:generate
+New-Item -ItemType File database/database.sqlite
+php artisan migrate
+php artisan dossier:user tester@dossier.test --name="Тестовый оператор"
+php artisan serve
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Откройте [локальный архив](http://127.0.0.1:8000). Команда `dossier:user` запрашивает пароль и подтверждение. Если в папке уже есть настроенные `.env` и `database/database.sqlite`, достаточно выполнить `php artisan serve`. Повторный `key:generate` сбросит действующие сессии.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+В Linux и macOS вместо `Copy-Item` используйте `cp .env.example .env`, вместо `New-Item` — `touch database/database.sqlite`.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Размещение на хостинге
 
-## Laravel Sponsors
+1. Укажите корнем сайта каталог `public/`. PHP должен иметь права записи в `storage/` и `bootstrap/cache/`. Понадобятся PHP 8.2+, расширения Laravel и PDO-драйвер выбранной базы.
+2. Выполните `composer install --no-dev --optimize-autoloader`. Создайте серверный `.env` из `.env.example` и задайте `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://ваш-домен` и `SESSION_SECURE_COOKIE=true`. Сгенерируйте ключ командой `php artisan key:generate` один раз при первоначальной настройке.
+3. Для SQLite создайте пустой `database/database.sqlite` в каталоге, доступном PHP для записи. При наличии постоянного каталога на хостинге можно указать абсолютный путь к файлу в `DB_DATABASE`. Для MySQL вместо этого задайте `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME` и `DB_PASSWORD`.
+4. Выполните `php artisan migrate --force`, затем `php artisan dossier:user ваш-адрес@домен --name="Ваше имя"`. Второй аккаунт добавьте после входа. При обновлении существующей установки повторяйте `php artisan migrate --force` после резервной копии базы.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+[Документация Laravel по размещению](https://laravel.com/docs/12.x/deployment)
 
-### Premium Partners
+## Проверки
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+Выполните `php artisan test`. Тесты используют SQLite в памяти и проверяют доступ к архиву, работу форм, сортировку и удаление связанных ответов.
 
-## Contributing
+## Иллюстрация
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Портрет на страницах входа и обзора создан встроенным инструментом ImageGen. Файл находится в `public/assets/cyber-jesus.webp`.
 
-## Code of Conduct
-
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
-
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+> Create a cinematic photorealistic web app banner photograph, landscape 3:2. Traditional recognizable depiction of Jesus of Nazareth, Middle Eastern adult man with dark shoulder-length hair, full beard, white garment and charcoal hooded cloak, looking at the camera. Cyberpunk streets at night, thin glowing magenta circular halo, atmospheric neon-pink rain haze and faint analog grain, a few subtle vertical urban lights. Head and shoulders in the RIGHT third, head fully visible with padding at top and bottom. Left half nearly black fading into the background for overlay text. Palette matte black, deep eggplant, neon fuchsia; high-end editorial film still, subtly devotional, no lettering, no logo, no watermark.
