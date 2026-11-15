@@ -30,6 +30,14 @@ php artisan serve
 
 ## Размещение на хостинге
 
+### Быстрый запуск по IP
+
+На VPS с Debian 12+ или Ubuntu 24.04+ и доступом по SSH скопируйте или клонируйте проект. В его папке выполните `sudo bash deploy.sh`. Скрипт устанавливает Apache и PHP, разворачивает сайт на [185.171.83.215](http://185.171.83.215/), применяет миграции и проверяет страницу входа. В панели хостинга должен быть доступен TCP-порт 80. Подключение по HTTP передаёт пароли и данные без шифрования.
+
+Для каждого администратора выполните в `/var/www/grekhometr` команду `sudo -u www-data php artisan dossier:user адрес@почта --name="Имя"`. Для обновления повторите запуск скрипта из свежего checkout. База в `/var/lib/grekhometr`, файлы аватаров и настройки сохраняются. Перед повторным запуском миграций скрипт создаёт резервную копию SQLite.
+
+### Ручная установка
+
 1. Укажите корнем сайта каталог `public/`. PHP должен иметь права записи в `storage/` и `bootstrap/cache/`. Понадобятся PHP 8.2+, расширения Laravel и PDO-драйвер выбранной базы.
 2. Выполните `composer install --no-dev --optimize-autoloader`. Создайте серверный `.env` из `.env.example` и задайте `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://ваш-домен` и `SESSION_SECURE_COOKIE=true`. Сгенерируйте ключ командой `php artisan key:generate` один раз при первоначальной настройке.
 3. Для SQLite создайте пустой `database/database.sqlite` в каталоге, доступном PHP для записи. При наличии постоянного каталога на хостинге можно указать абсолютный путь к файлу в `DB_DATABASE`. Для MySQL вместо этого задайте `DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME` и `DB_PASSWORD`.
@@ -43,6 +51,6 @@ php artisan serve
 
 ## Иллюстрация
 
-Портрет на страницах входа и обзора создан встроенным инструментом ImageGen. Файл находится в `public/assets/cyber-jesus.webp`.
+На всех страницах используется фон `public/assets/backgraound.webp`. Исходный портрет из предыдущей версии хранится в `public/assets/cyber-jesus.webp`.
 
 > Create a cinematic photorealistic web app banner photograph, landscape 3:2. Traditional recognizable depiction of Jesus of Nazareth, Middle Eastern adult man with dark shoulder-length hair, full beard, white garment and charcoal hooded cloak, looking at the camera. Cyberpunk streets at night, thin glowing magenta circular halo, atmospheric neon-pink rain haze and faint analog grain, a few subtle vertical urban lights. Head and shoulders in the RIGHT third, head fully visible with padding at top and bottom. Left half nearly black fading into the background for overlay text. Palette matte black, deep eggplant, neon fuchsia; high-end editorial film still, subtly devotional, no lettering, no logo, no watermark.
