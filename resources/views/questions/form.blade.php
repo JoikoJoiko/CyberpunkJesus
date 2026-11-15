@@ -16,7 +16,7 @@
             <option value="{{ $type->value }}" @selected(old('type', $question->type->value) === $type->value)>{{ $type->label() }}</option>
         @endforeach
         </select></label>
-        <label>Порядок в анкете<input type="number" name="position" min="0" max="99999" value="{{ old('position', $question->position) }}" required><small>Вопросы с меньшим числом идут раньше.</small></label>
+        <label>Порядок внутри блока<input type="number" name="position" min="0" max="99999" value="{{ old('position', $question->position) }}" required><small>Вопросы с меньшим числом идут раньше в выбранном блоке.</small></label>
         <label>Символьный код<input type="text" name="code" maxlength="64" pattern="[A-Za-z_][A-Za-z0-9_]*" value="{{ old('code', $question->code) }}"><small>Если оставить пустым, код заполнится автоматически. Для даты рождения введите birthDate.</small></label>
         <label>Блок<input type="text" name="block" list="question-blocks" maxlength="100" value="{{ old('block', $question->block) }}"><small>Выберите существующий блок или введите название нового.</small></label>
         <datalist id="question-blocks">

@@ -6,13 +6,20 @@ use App\Models\ChangeLog;
 use App\Models\Answer;
 use App\Models\Player;
 use App\Models\Question;
+use App\Models\QuestionBlock;
 use App\Models\Questionnaire;
 use App\Models\QuestionType;
+use Dompdf\Dompdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use PhpOffice\PhpWord\IOFactory;
+use PhpOffice\PhpWord\PhpWord;
+use PhpOffice\PhpWord\Settings;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PlayerController extends Controller
 {
@@ -52,6 +59,89 @@ class PlayerController extends Controller
         return $this->form($player);
     }
 
+    public function show(Player $player): View
+    {
+        return view('players.show', $this->printData($player));
+    }
+
+    public function pdf(Player $player): Response
+    {
+        $pdf = new Dompdf(['defaultFont' => 'DejaVu Sans', 'isRemoteEnabled' => false]);
+        $pdf->setPaper('A4', 'portrait');
+        $pdf->loadHtml(view('players.pdf', $this->printData($player))->render(), 'UTF-8');
+        $pdf->render();
+
+        return response($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="player-'.$player->id.'.pdf"',
+            'Cache-Control' => 'private, no-store',
+        ]);
+    }
+
+    public function docx(Player $player): StreamedResponse
+    {
+        $data = $this->printData($player);
+        Settings::setOutputEscapingEnabled(true);
+        $document = new PhpWord;
+        $document->setDefaultFontName('Arial');
+        $document->setDefaultFontSize(11);
+        $document->addTitleStyle(1, ['size' => 20, 'bold' => true, 'color' => '851650']);
+        $document->addTitleStyle(2, ['size' => 14, 'bold' => true, 'color' => '851650']);
+        $section = $document->addSection(['paperSize' => 'A4', 'orientation' => 'portrait']);
+        $section->addTitle($data['title'], 1);
+        foreach ($data['sections'] as $group) {
+            $section->addTitle($group['heading'], 2);
+            foreach ($group['rows'] as $row) {
+                $section->addText($row['label'], ['bold' => true], ['keepNext' => true]);
+                foreach (preg_split('/\R/u', $row['value'] ?? '—') as $line) {
+                    $section->addText($line);
+                }
+                if ($row['clarification'] !== null) {
+                    foreach (preg_split('/\R/u', 'Уточнение: '.$row['clarification']) as $line) {
+                        $section->addText($line, ['italic' => true, 'color' => '59505A']);
+                    }
+                }
+            }
+        }
+
+        return response()->streamDownload(
+            fn () => IOFactory::createWriter($document, 'Word2007')->save('php://output'),
+            'player-'.$player->id.'.docx',
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'Cache-Control' => 'private, no-store'],
+        );
+    }
+
+    private function printData(Player $player): array
+    {
+        $questions = Question::ordered()->get();
+        $answers = $player->answers()->get()->keyBy('question_id');
+        $birthQuestion = $questions->firstWhere('code', Question::BIRTH_DATE_CODE);
+        $age = Player::ageFrom($answers->get($birthQuestion?->id)?->value);
+        $rows = [
+            ['label' => 'Ник', 'value' => $player->nickname, 'clarification' => null],
+            ['label' => 'Возраст', 'value' => $age === null ? null : (string) $age, 'clarification' => null],
+            ['label' => 'Дата опроса', 'value' => $player->interviewed_on?->format('d.m.Y'), 'clarification' => null],
+            ['label' => 'Примечание', 'value' => $player->notes, 'clarification' => null],
+        ];
+        $sections = [['heading' => 'Об игроке', 'rows' => $rows]];
+        foreach (QuestionBlock::groupQuestions($questions) as $name => $group) {
+            $sections[] = [
+                'heading' => $name === '' ? 'Без блока' : (string) $name,
+                'rows' => $group->map(function (Question $question) use ($answers) {
+                    $answer = $answers->get($question->id);
+
+                    return [
+                        'label' => $question->label,
+                        'value' => $answer?->value !== null ? $question->displayAnswer($answer->value) : null,
+                        'clarification' => $answer?->clarification,
+                    ];
+                }),
+            ];
+        }
+
+        return ['player' => $player, 'title' => $player->nickname ?? 'Анкета без ника', 'sections' => $sections];
+    }
+
     public function store(Request $request): RedirectResponse
     {
         return $this->save($request);
@@ -80,7 +170,7 @@ class PlayerController extends Controller
         $answers = $player->exists ? $player->answers()->get()->keyBy('question_id') : collect();
         $birthQuestion = $questions->firstWhere('code', Question::BIRTH_DATE_CODE);
         $age = Player::ageFrom($answers->get($birthQuestion?->id)?->value);
-        $blocks = $questions->groupBy(fn (Question $question) => $question->block ?? '');
+        $blocks = QuestionBlock::groupQuestions($questions);
 
         return view('players.form', compact('player', 'revision', 'blocks', 'answers', 'age'));
     }

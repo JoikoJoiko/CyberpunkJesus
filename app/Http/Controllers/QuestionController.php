@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ChangeLog;
 use App\Models\Question;
+use App\Models\QuestionBlock;
 use App\Models\Questionnaire;
 use App\Models\QuestionType;
 use Illuminate\Http\RedirectResponse;
@@ -19,17 +20,21 @@ class QuestionController extends Controller
     public function index(): View
     {
         return view('questions.index', [
-            'questions' => Question::ordered()->withCount(['answers' => fn ($query) => $query->answered()])->get(),
+            'groups' => QuestionBlock::groupQuestions(Question::ordered()->withCount(['answers' => fn ($query) => $query->answered()])->get()),
+            'blocks' => QuestionBlock::ordered(),
         ]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
+        $default = $request->validate(['block' => ['nullable', 'string', 'max:100']])['block'] ?? null;
+
         return view('questions.form', [
             'blocks' => $this->blocks(),
             'question' => new Question([
                 'type' => QuestionType::Text,
-                'position' => min(99999, Question::max('position') + 10),
+                'block' => $default,
+                'position' => min(99999, Question::where('block', $default)->max('position') + 10),
             ]),
         ]);
     }
@@ -41,7 +46,49 @@ class QuestionController extends Controller
 
     private function blocks()
     {
-        return Question::whereNotNull('block')->distinct()->orderBy('block')->pluck('block');
+        return QuestionBlock::ordered()->pluck('name')->filter(fn ($name) => $name !== '');
+    }
+
+    public function reorderBlocks(Request $request): RedirectResponse
+    {
+        $positions = $request->validate([
+            'positions' => ['required', 'array'],
+            'positions.*' => ['required', 'integer', 'between:0,99999'],
+        ])['positions'];
+
+        DB::transaction(function () use ($positions) {
+            Questionnaire::revision(lock: true);
+            foreach (QuestionBlock::ordered() as $block) {
+                if (array_key_exists($block->id, $positions)) {
+                    $block->update(['position' => $positions[$block->id]]);
+                }
+            }
+        }, attempts: 3);
+
+        return to_route('questions.index')->with('status', 'Порядок блоков обновлён.');
+    }
+
+    public function reorderQuestions(Request $request, QuestionBlock $block): RedirectResponse
+    {
+        $positions = $request->validate([
+            'positions' => ['required', 'array'],
+            'positions.*' => ['required', 'integer', 'between:0,99999'],
+        ])['positions'];
+
+        DB::transaction(function () use ($request, $block, $positions) {
+            Questionnaire::revision(lock: true);
+            $questions = Question::where('block', $block->name === '' ? null : $block->name)
+                ->whereKey(array_keys($positions))->get();
+            foreach ($questions->filter(fn (Question $question) => ($question->block ?? '') === $block->name) as $question) {
+                $question->fill(['position' => $positions[$question->id]]);
+                if ($question->isDirty('position')) {
+                    $question->save();
+                    ChangeLog::record($request->user(), $question, 'updated', ['Порядок в блоке']);
+                }
+            }
+        }, attempts: 3);
+
+        return to_route('questions.index')->with('status', 'Порядок вопросов в блоке обновлён.');
     }
 
     public function store(Request $request): RedirectResponse
@@ -160,6 +207,10 @@ class QuestionController extends Controller
             }
 
             $question->save();
+            $blockName = $question->block ?? '';
+            if (! QuestionBlock::ordered()->contains(fn (QuestionBlock $block) => $block->name === $blockName)) {
+                QuestionBlock::create(['name' => $blockName, 'position' => min(99999, QuestionBlock::max('position') + 10)]);
+            }
             Questionnaire::advance();
             ChangeLog::record($request->user(), $question, $existing ? 'updated' : 'created', $fields);
         }, attempts: 3);

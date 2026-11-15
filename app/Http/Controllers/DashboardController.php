@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Answer;
+use App\Models\DashboardChart;
 use App\Models\Player;
 use App\Models\Question;
 use App\Models\QuestionType;
@@ -22,6 +23,7 @@ class DashboardController extends Controller
             'playerCount' => Player::count(),
             'answerCount' => Answer::answered()->count(),
             'questionCount' => Question::count(),
+            'charts' => DashboardChart::with('question')->orderBy('id')->get()->filter(fn ($chart) => $chart->question !== null),
             'recent' => Player::latest('id')->limit(5)->withCount(['answers' => fn ($query) => $query->answered()])->get(),
             'activity' => $days->map(fn ($day) => [
                 'label' => $day->format('d.m'),

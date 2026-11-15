@@ -19,13 +19,13 @@
             <tbody>
             @foreach($players as $player)
                 <tr>
-                    <td><a class="row-title" href="{{ route('players.edit', $player) }}">{{ $player->nickname ?? 'Без ника' }}</a>
+                    <td><a class="row-title" href="{{ route('players.show', $player) }}">{{ $player->nickname ?? 'Без ника' }}</a>
                         @if($player->notes)<small class="row-note">{{ str($player->notes)->limit(85) }}</small>@endif
                     </td>
                     <td>{{ \App\Models\Player::ageFrom($player->birth_date) ?? '—' }}</td>
                     <td>{{ $player->interviewed_on?->format('d.m.Y') ?? '—' }}</td>
                     <td>{{ $player->answers_count }}</td>
-                    <td><a class="link" href="{{ route('players.edit', $player) }}">Открыть →</a></td>
+                    <td><a class="link" href="{{ route('players.show', $player) }}">Открыть →</a></td>
                 </tr>
             @endforeach
             </tbody>

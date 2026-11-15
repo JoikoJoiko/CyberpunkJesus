@@ -88,7 +88,7 @@
         @else
             <button class="button primary">Сохранить анкету</button>
         @endif
-        <a class="button secondary" href="{{ route('players.index') }}">Отмена</a>
+        <a class="button secondary" href="{{ $player->exists ? route('players.show', $player) : route('players.index') }}">Отмена</a>
     </div>
 </form>
 @if($player->exists)

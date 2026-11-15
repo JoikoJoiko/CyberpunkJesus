@@ -17,6 +17,63 @@ class DossierTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_print_exports_follow_block_order_and_dashboard_charts_use_saved_answers(): void
+    {
+        $this->actingAs(User::factory()->create());
+        foreach ([
+            ['label' => 'Рост', 'type' => 'number', 'block' => 'Размеры', 'position' => 20],
+            ['label' => 'Вес', 'type' => 'number', 'block' => 'Размеры', 'position' => 10],
+            ['label' => 'Любимый цвет', 'type' => 'text', 'block' => 'Вкусы', 'position' => 5],
+        ] as $question) {
+            $this->post(route('questions.store'), $question)->assertRedirect(route('questions.index'));
+        }
+
+        $blocks = \App\Models\QuestionBlock::pluck('id', 'name');
+        $height = Question::where('label', 'Рост')->firstOrFail();
+        $color = Question::where('label', 'Любимый цвет')->firstOrFail();
+        $this->put(route('questions.blocks.order'), ['positions' => [$blocks['Размеры'] => 1, $blocks['Вкусы'] => 2]])->assertRedirect();
+        $this->put(route('questions.blocks.questions', $blocks['Размеры']), [
+            'positions' => [$height->id => 1, $color->id => 3],
+        ])->assertRedirect();
+        $this->assertSame(5, $color->fresh()->position);
+        $this->get(route('questions.index'))->assertOk()->assertSeeInOrder(['Размеры', 'Рост', 'Вес', 'Любимый цвет']);
+        $this->post(route('players.store'), [
+            'nickname' => 'Игрок & тест',
+            'questionnaire_revision' => Questionnaire::revision(),
+            'answers' => [$height->id => '190', $color->id => 'Розовый'],
+            'clarifications' => [$height->id => 'Примерно'],
+        ])->assertRedirect();
+        $player = Player::sole();
+        $this->get(route('players.show', $player))->assertOk()
+            ->assertSeeInOrder(['Игрок &amp; тест', 'Размеры', 'Рост', '190', 'Примерно', 'Вес', 'Любимый цвет'], false);
+        $pdf = $this->get(route('players.pdf', $player))->assertOk()->assertDownload();
+        $this->assertStringStartsWith('%PDF', $pdf->getContent());
+        $this->assertMatchesRegularExpression('/MediaBox\s*\[0(?:\.\d+)? 0(?:\.\d+)? 595[\d.]* 841[\d.]*\]/', $pdf->getContent());
+        $docx = $this->get(route('players.docx', $player))->assertOk()->assertDownload()->streamedContent();
+        $path = tempnam(sys_get_temp_dir(), 'dossier-word-');
+        try {
+            file_put_contents($path, $docx);
+            $archive = new \ZipArchive;
+            $this->assertTrue($archive->open($path));
+            $xml = $archive->getFromName('word/document.xml');
+            $archive->close();
+            $this->assertStringContainsString('Игрок &amp; тест', $xml);
+            $this->assertStringContainsString('Примерно', $xml);
+            $this->assertStringContainsString('w:orient="portrait"', $xml);
+        } finally {
+            unlink($path);
+        }
+
+        foreach (['bar', 'pie', 'histogram'] as $type) {
+            $this->post(route('charts.store'), ['name' => 'Рост '.$type, 'question_id' => $height->id, 'type' => $type])->assertRedirect(route('dashboard'));
+        }
+        $chart = \App\Models\DashboardChart::where('type', 'pie')->firstOrFail();
+        $this->put(route('charts.update', $chart), ['name' => 'Цвета', 'question_id' => $color->id, 'type' => 'pie'])->assertRedirect();
+        $this->get(route('dashboard'))->assertOk()->assertSee('Рост histogram')->assertSee('Цвета')->assertSee('Розовый');
+        $this->delete(route('charts.destroy', $chart))->assertRedirect(route('dashboard'));
+        $this->assertDatabaseCount('dashboard_charts', 2);
+    }
+
     public function test_question_codes_and_blocks_display_the_current_age(): void
     {
         $this->travelTo(now()->setDate(2026, 11, 15));

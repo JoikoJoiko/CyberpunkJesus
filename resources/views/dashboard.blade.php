@@ -38,7 +38,7 @@
     <section class="panel section-panel">
     <header class="section-head"><h2>Последние игроки</h2><a class="link" href="{{ route('players.index') }}">Все анкеты ↗</a></header>
     @forelse($recent as $player)
-        <a class="recent-row" href="{{ route('players.edit', $player) }}">
+        <a class="recent-row" href="{{ route('players.show', $player) }}">
             <span><strong>{{ $player->nickname ?? 'Без ника' }}</strong><small>{{ $player->interviewed_on?->format('d.m.Y') ?? $player->created_at->format('d.m.Y') }}</small></span>
             <span>{{ $player->answers_count }} отв. <span aria-hidden="true">→</span></span>
         </a>
@@ -47,4 +47,17 @@
     @endforelse
     </section>
 </div>
+<section class="dashboard-charts" aria-labelledby="charts-heading">
+    <header class="section-head">
+        <h2 id="charts-heading">Дашборды</h2>
+        <a class="button secondary" href="{{ route('charts.create') }}">+ Диаграмма</a>
+    </header>
+    @if($charts->isNotEmpty())
+        <div class="chart-grid">
+            @foreach($charts as $chart)
+                @include('charts.card')
+            @endforeach
+        </div>
+    @endif
+</section>
 @endsection
